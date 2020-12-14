@@ -1,0 +1,7 @@
+.vscode/
+__pycache__/
+.ipynb_checkpoints/
+
+ngram/corpus/
+scg/graph/
+graph2vec.model*
