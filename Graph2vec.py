@@ -10,10 +10,6 @@ from joblib import Parallel, delayed
 from multiprocessing import cpu_count
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
-import logging
-import coloredlogs
-coloredlogs.install()
-
 
 class WeisfeilerLehmanMachine:
     """
@@ -118,11 +114,11 @@ class Graph2vec:
         Learn the embedding and save it.
         :param args: Object with the arguments.
         """
-        logging.info("Training Graph2vec...")
         graphs = input_paths
         document_collections = Parallel(n_jobs=self.workers, prefer="threads")(
-            delayed(self.feature_extractor)(g, self.wl_iterations) for g in tqdm(graphs, desc='Load data'))
+            delayed(self.feature_extractor)(g, self.wl_iterations) for g in tqdm(graphs, desc='Load graph'))
 
+        print('Training graph2vec...')
         self.model = Doc2Vec(document_collections,
                              vector_size=self.dimensions,
                              window=0,
@@ -144,7 +140,7 @@ class Graph2vec:
         return out
 
     def apply(self, input_paths):
-        logging.info('Applying Graph2vec...')
+        print('Applying graph2vec...')
         graphs = input_paths
         document_collections = Parallel(n_jobs=self.workers, prefer="threads")(
             delayed(self.feature_extractor)(g, self.wl_iterations) for g in tqdm(graphs, desc='Load data'))

@@ -26,8 +26,6 @@ HYPER_GRID = {
     'RF': {"n_estimators": [10, 100, 1000]},
 }
 
-HEADERS = ["Classifier", "Accuracy", "ROC AUC", "FPR", "Precision", "Recall",
-           "F1-score", "TP", "FP", "TN", "FN"]
 COLORS = ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray"]
 
 
@@ -59,7 +57,6 @@ class Classifiers:
 
         print(X_train.shape, X_test.shape)
 
-        report = []
         for clf_name in self.clf:
             print(clf_name)
             self.clf[clf_name].fit(X_train, y_train)
@@ -68,6 +65,7 @@ class Classifiers:
                 dump(ftsl, self.model_path + 'ftsl.joblib')
 
             y_pred = self.clf[clf_name].predict(X_test)
+
             cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
             TN, FP, FN, TP = cnf_matrix.ravel()
             FPR = FP / (FP + TN)
@@ -76,16 +74,9 @@ class Classifiers:
             except Exception as e:
                 print('[ERROR]', e)
                 roc_auc = None
-            row = [
-                str(clf_name),
-                round(100 * metrics.accuracy_score(y_test, y_pred), 2),
-                roc_auc,
-                round(100 * FPR, 2),
-                round(100 * metrics.precision_score(y_test, y_pred), 2),
-                round(100 * metrics.recall_score(y_test, y_pred), 2),
-                round(100 * metrics.f1_score(y_test, y_pred), 2),
-            ]
-            row.extend([TP, FP, TN, FN])
-            report.append(row)
-            print(row)
-            pd.DataFrame(report).to_csv('result/report.csv', index=False)
+
+            print(metrics.classification_report(y_test, y_pred, digits=4))
+            print(cnf_matrix)
+            print('FPR: %.4f' % FPR)
+            print('ROC AUC: %.4f' % roc_auc)
+            print('-' * 80)
