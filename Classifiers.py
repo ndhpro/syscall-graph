@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from joblib import dump, load
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.feature_selection import SelectFromModel
@@ -13,10 +14,16 @@ from imblearn.over_sampling import SMOTE
 
 
 ALGO = ['DT', 'KNN', 'SVM', 'RF']
+CLF_NAME = {
+    'DT': 'Decision Tree',
+    'KNN': 'K-Nearest Neighbors',
+    'SVM': 'SVM',
+    'RF': 'Random Forest'
+}
 CLASSIFIERS = {
     'DT': DecisionTreeClassifier(random_state=2020, class_weight="balanced"),
     'KNN': KNeighborsClassifier(n_jobs=-1),
-    'SVM': SVC(kernel='rbf', random_state=2020, class_weight="balanced"),
+    'SVM': SVC(kernel='rbf', random_state=2020, class_weight="balanced", probability=True),
     'RF': RandomForestClassifier(random_state=2020, class_weight="balanced", n_jobs=-1)
 }
 HYPER_GRID = {
@@ -26,11 +33,11 @@ HYPER_GRID = {
     'RF': {"n_estimators": [10, 100, 1000]},
 }
 
-COLORS = ["blue", "orange", "green", "red", "purple", "brown", "pink", "gray"]
+COLORS = ['purple', 'orange', 'green', 'red']
 
 
 class Classifiers:
-    def __init__(self, algo=ALGO, model_path='model/'):
+    def __init__(self, algo=ALGO, model_path=None):
         self.model_path = model_path
         self.clf = {}
         for clf_name in algo:
@@ -57,7 +64,8 @@ class Classifiers:
 
         print(X_train.shape, X_test.shape)
 
-        for clf_name in self.clf:
+        roc_auc = {}
+        for clf_name, color in zip(self.clf, COLORS):
             print(clf_name)
             self.clf[clf_name].fit(X_train, y_train)
 
@@ -65,18 +73,35 @@ class Classifiers:
                 dump(ftsl, self.model_path + 'ftsl.joblib')
 
             y_pred = self.clf[clf_name].predict(X_test)
+            y_prob = self.clf[clf_name].predict_proba(X_test)[:, 1]
 
             cnf_matrix = metrics.confusion_matrix(y_test, y_pred)
             TN, FP, FN, TP = cnf_matrix.ravel()
             FPR = FP / (FP + TN)
-            try:
-                roc_auc = round(100 * metrics.roc_auc_score(y_test, y_pred), 2)
-            except Exception as e:
-                print('[ERROR]', e)
-                roc_auc = None
+            fpr, tpr, _ = metrics.roc_curve(y_test, y_prob)
+            auc = metrics.roc_auc_score(y_test, y_prob)
+
+            roc_auc[CLF_NAME[clf_name]] = [auc, fpr, tpr]
 
             print(metrics.classification_report(y_test, y_pred, digits=4))
             print(cnf_matrix)
             print('FPR: %.4f' % FPR)
-            print('ROC AUC: %.4f' % roc_auc)
+            print('ROC AUC: %.4f' % auc)
             print('-' * 80)
+
+        self.draw_roc(roc_auc)
+
+    def draw_roc(self, roc_auc):
+        roc_auc = dict(sorted(roc_auc.items(), key=lambda k: k[1][0]))
+        for name, color in zip(roc_auc, COLORS):
+            auc, fpr, tpr = roc_auc[name]
+            plt.plot(fpr, tpr, color=color, marker='.',
+                     label="%s (AUC = %0.4f)" % (name, auc))
+            plt.plot([0, 1], [0, 1], "b--")
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel("1-Specificity(False Positive Rate)")
+            plt.ylabel("Sensitivity(True Positive Rate)")
+            plt.title("Receiver Operating Characteristic")
+            plt.legend(loc="lower right")
+            plt.savefig(f"result/roc.png", dpi=300)

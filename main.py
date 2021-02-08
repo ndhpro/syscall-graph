@@ -25,15 +25,15 @@ def get_graph_paths():
                              'Tsunami/Kaiten (2013)', 'file_name'].values)
     print(len(bashlite), len(mirai), len(tsunami), len(benign))
 
-    X_train = bashlite + mirai + benign[:2000]
-    X_test = tsunami + benign[2000:]
+    X_train = tsunami + bashlite + benign[:2000]
+    X_test = mirai + benign[2000:]
 
     X_train = [f'graph/{x}.json' for x in X_train]
     X_test = [f'graph/{x}.json' for x in X_test]
 
-    y_train = list(np.ones(len(mirai) + len(bashlite))) + \
+    y_train = list(np.ones(len(bashlite) + len(tsunami))) + \
         list(np.zeros(2000))
-    y_test = list(np.ones(len(tsunami))) + list(np.zeros(len(benign) - 2000))
+    y_test = list(np.ones(len(mirai))) + list(np.zeros(len(benign) - 2000))
     return X_train, X_test, y_train, y_test
 
 
@@ -49,11 +49,11 @@ def graph2vec(X_train, X_test):
 if __name__ == '__main__':
     X_train, X_test, y_train, y_test = get_graph_paths()
 
-    graph2vec(X_train, X_test)
+    # graph2vec(X_train, X_test)
 
     classifiers = Classifiers()
-    train = pd.read_csv('data/train.csv')
-    test = pd.read_csv('data/test.csv')
+    train = pd.read_csv('data/mirai-train.csv')
+    test = pd.read_csv('data/mirai-test.csv')
 
     X_train = train.loc[:, 'x_0':].values
     X_test = test.loc[:, 'x_0':].values
