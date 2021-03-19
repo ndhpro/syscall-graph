@@ -1,54 +1,55 @@
-from glob import glob
 import json
 import pandas as pd
-import os
+import networkx as nx
+from glob import glob
+from multiprocessing import cpu_count
+from joblib import Parallel, delayed
+
+N_JOBS = cpu_count()
+report_paths = glob(
+    '/media/vserver12/data/vsandbox_report/final_report_*/*/')
 
 
-def scg(fpath, pid, u):
+def scg(rp_path, pid, u):
     edges = []
-    path = f'{fpath}strace{pid}.json'
+    path = rp_path + 'strace' + pid + '.json'
     with open(path, 'r') as f:
         data = json.load(f)
     for sc in data:
         if sc['name'] == 'execve' and sc['return'] != '0':
             return edges
-        node_id = sc['name'] + sc['arguments'] + pid
-        nodes[node_id] = nodes.get(node_id, len(nodes))
-        v = nodes[node_id]
+        v = sc['name'] + '(' + sc['arguments'] + '):' + pid
         if u:
             edges.append([u, v])
         u = v
-        if sc['name'] == 'fork':
-            pidf = sc['return']
-            if os.path.exists(f'{fpath}strace{pidf}.json'):
-                edgesf = scg(fpath, pidf, u)
-                edges.extend(edgesf)
+        if sc['name'] == 'fork' or sc['name'] == 'clone':
+            pid_child = sc['return']
+            if glob(rp_path + 'strace' + pid_child + '.json'):
+                edges.extend(scg(rp_path, pid_child, u))
     return edges
 
 
-file_list = glob(
-    '/media/server1/data/vsandbox_report/final_report_malware/*/')
-file_list.extend(
-    glob('/media/server1/data/vsandbox_report/final_report_benign/*/'))
+def extract_graph(path):
+    file_name = path.split('/')[-2].split('_')[0]
+    graph_path = 'data/scg/' + file_name + '.gexf'
+    if glob(graph_path):
+        return 1
 
-labels = []
-for file_path in file_list:
-    file_name = file_path.split('/')[-2].split('_')[0]
-    nodes = {}
     edges = []
-    sc_paths = glob(file_path + 'strace*.json')
+    sc_paths = glob(path + 'strace*.json')
     sc_paths.sort()
     if sc_paths:
         pid = sc_paths[0].split('strace')[-1].split('.json')[0]
-        edges = scg(file_path, pid, None)
+        edges = scg(path, pid, None)
 
     if edges:
-        G = {'edges': edges}
-        with open(f'graph/{file_name}.json', 'w') as f:
-            json.dump(G, f)
-        labels.append({
-            'file': file_name,
-            'label': 1 if 'malware' in file_path else 0
-        })
+        G = nx.DiGraph()
+        G.add_edges_from(edges)
+        nx.write_gexf(G, graph_path)
+        return 1
+    return 0
 
-pd.DataFrame(labels).to_csv('data/label.csv', index=None)
+
+output = Parallel(n_jobs=N_JOBS, verbose=50)(
+    delayed(extract_graph)(path) for path in report_paths)
+print(f'Generated {sum(output)} SCGs.')
