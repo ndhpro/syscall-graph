@@ -28,9 +28,9 @@ CLASSIFIERS = {
 }
 HYPER_GRID = {
     'KNN': {"n_neighbors": [10, 100, 1000], "weights": ["uniform", "distance"]},
-    'DT': {"criterion": ["gini", "entropy"]},
+    'DT': {"criterion": ["gini", "entropy"], "splitter": ["best", "random"]},
     'RF': {"n_estimators": [10, 100, 1000]},
-    'SVM': {"C": np.logspace(-2, 2, 5), "gamma": np.logspace(-2, 2, 5)},
+    'SVM': {"C": np.logspace(-1, 1, 3), "gamma": np.logspace(-1, 1, 3)},
 
 }
 
@@ -49,7 +49,7 @@ class Classifiers:
             )
 
     def run(self, X_train, X_test, y_train, y_test):
-        print('Original shape:', X_train.shape, X_test.shape)
+        report = f'Original shape: {X_train.shape} {X_test.shape}\n'
 
         smote = SMOTE(random_state=SEED)
         X_train, y_train = smote.fit_resample(X_train, y_train)
@@ -63,9 +63,8 @@ class Classifiers:
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
 
-        print('Processed shape:', X_train.shape, X_test.shape)
+        report += f'Processed shape: {X_train.shape} {X_test.shape}\n'
 
-        report = '-' * 80 + '\n'
         roc_auc = {}
         for clf_name in self.clf:
             print(CLF_NAME[clf_name] + '... ', end='', flush=True)
@@ -86,7 +85,8 @@ class Classifiers:
                 'ROC AUC': '%.4f' % auc,
             }, index=[0]).to_string(col_space=9, index=False)
             roc_auc[CLF_NAME[clf_name]] = [auc, fpr, tpr]
-
+            report += '-' * 80 + '\n'
+            report += CLF_NAME[clf_name] + '\n'
             report += f'{metrics.classification_report(y_test, y_pred, digits=4)}\n'
             report += f'{cnf_matrix}\n\n'
             report += f'{other_metrics}\n'
@@ -100,6 +100,7 @@ class Classifiers:
         roc_auc = dict(sorted(roc_auc.items(), key=lambda k: k[1][0]))
         for name, color in zip(roc_auc, COLORS):
             auc, fpr, tpr = roc_auc[name]
+            plt.figure()
             plt.plot(fpr, tpr, color=color, marker=',',
                      label="%s (AUC = %0.4f)" % (name, auc))
             plt.plot([0, 1], [0, 1], "b--")
