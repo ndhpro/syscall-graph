@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from joblib import dump, load
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler, Normalizer
 from sklearn import metrics
@@ -50,7 +49,7 @@ class Classifiers:
             )
 
     def run(self, X_train, X_test, y_train, y_test):
-        print(X_train.shape, X_test.shape)
+        print('Original shape:', X_train.shape, X_test.shape)
 
         smote = SMOTE(random_state=SEED)
         X_train, y_train = smote.fit_resample(X_train, y_train)
@@ -64,15 +63,13 @@ class Classifiers:
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
 
-        print(X_train.shape, X_test.shape)
+        print('Processed shape:', X_train.shape, X_test.shape)
 
+        report = '-' * 80 + '\n'
         roc_auc = {}
-        for clf_name, color in zip(self.clf, COLORS):
-            print(clf_name)
+        for clf_name in self.clf:
+            print(CLF_NAME[clf_name] + '... ', end='', flush=True)
             self.clf[clf_name].fit(X_train, y_train)
-
-            if self.model_path:
-                dump(ftsl, self.model_path + 'ftsl.joblib')
 
             y_pred = self.clf[clf_name].predict(X_test)
             y_prob = self.clf[clf_name].predict_proba(X_test)[:, 1]
@@ -83,17 +80,21 @@ class Classifiers:
             FPR = FP / (FP + TN)
             fpr, tpr, _ = metrics.roc_curve(y_test, y_prob)
             auc = metrics.roc_auc_score(y_test, y_prob)
-
+            other_metrics = pd.DataFrame({
+                'TPR': '%.4f' % TPR,
+                'FPR': '%.4f' % FPR,
+                'ROC AUC': '%.4f' % auc,
+            }, index=[0]).to_string(col_space=9, index=False)
             roc_auc[CLF_NAME[clf_name]] = [auc, fpr, tpr]
 
-            print(metrics.classification_report(y_test, y_pred, digits=4))
-            print(cnf_matrix + '\n')
-            print('TPR: %.4f' % TPR)
-            print('FPR: %.4f' % FPR)
-            print('ROC AUC: %.4f' % auc)
-            print('-' * 80)
+            report += f'{metrics.classification_report(y_test, y_pred, digits=4)}\n'
+            report += f'{cnf_matrix}\n\n'
+            report += f'{other_metrics}\n'
 
-        # self.draw_roc(roc_auc)
+            print('%.4f' % metrics.accuracy_score(y_test, y_pred))
+
+        roc = self.draw_roc(roc_auc)
+        return report, roc
 
     def draw_roc(self, roc_auc):
         roc_auc = dict(sorted(roc_auc.items(), key=lambda k: k[1][0]))
@@ -108,4 +109,4 @@ class Classifiers:
             plt.ylabel("Sensitivity(True Positive Rate)")
             plt.title("Receiver Operating Characteristic")
             plt.legend(loc="lower right")
-            plt.savefig(f"roc.png", dpi=300)
+        return plt

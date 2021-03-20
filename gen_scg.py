@@ -28,8 +28,7 @@ def scg(rp_path, pid, u):
 def extract_graph(path):
     file_name = path.split('/')[-2].split('_')[0]
     graph_path = 'data/scg/' + file_name + '.adjlist'
-    kc_path = 'data/scg_kc/' + file_name + '.adjlist'
-    if glob(kc_path):
+    if glob(graph_path):
         return 1
 
     edges = []
@@ -42,12 +41,11 @@ def extract_graph(path):
     if edges:
         G = nx.Graph()
         G.add_edges_from(edges)
-        G = nx.relabel_nodes(G, mapping=dict(zip(G, range(len(G)))))
-        nx.write_adjlist(G, kc_path)
+        nx.write_adjlist(G, graph_path)
         return 1
     return 0
 
 
-output = Parallel(n_jobs=N_JOBS, verbose=50)(
+output = Parallel(n_jobs=N_JOBS, verbose=10)(
     delayed(extract_graph)(path) for path in RP_PATHS)
 print(f'Generated {sum(output)} SCGs.')
