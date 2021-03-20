@@ -10,7 +10,7 @@ from joblib import Parallel, delayed
 from constants import *
 from Classifiers import Classifiers
 
-DST_PATH = 'data/scg-for-graph2vec/'
+DST_PATH = 'data/scg-json/'
 
 
 def run(path):
@@ -32,7 +32,7 @@ def run(path):
 #     delayed(run)(path) for path in tqdm(SCG_PATHS))
 # print(f'Generated {sum(output)} SCGs (graph2vec).')
 
-# cmd = 'python graph2vec/src/graph2vec.py --input-path data/scg-for-graph2vec/ --output-path data/graph2vec.csv --epochs 50 --wl-iterations 3'
+# cmd = 'python graph2vec/src/graph2vec.py --input-path data/scg-json/ --output-path data/graph2vec.csv --epochs 50 --wl-iterations 3'
 # p = subprocess.Popen(cmd, shell=True)
 # p.wait()
 

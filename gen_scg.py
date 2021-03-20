@@ -14,7 +14,7 @@ def scg(rp_path, pid, u):
         if sc['name'] == 'execve' and sc['return'] != '0':
             return edges
         v = pid + ':' + sc['name'] + '(' + sc['arguments'] + ')'
-        v = v.replace(' ', '_')
+        v = v.replace(' ', '_').replace('#', '<hash>')
         if u:
             edges.append([u, v])
         u = v
