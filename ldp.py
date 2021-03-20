@@ -23,9 +23,9 @@ def gen_emb(path):
     return emb
 
 
-# embs = Parallel(n_jobs=N_JOBS)(delayed(gen_emb)(path) for path in tqdm(paths))
-# columns = ['name'] + [f'x_{i}' for i in range(160)]
-# pd.DataFrame(embs, columns=columns).to_csv('data/ldp.csv', index=None)
+embs = Parallel(n_jobs=N_JOBS)(delayed(gen_emb)(path) for path in tqdm(paths))
+columns = ['name'] + [f'x_{i}' for i in range(160)]
+pd.DataFrame(embs, columns=columns).to_csv('data/ldp.csv', index=None)
 
 embs = pd.read_csv('data/ldp.csv')
 data = pd.read_csv('data/labels.csv')
